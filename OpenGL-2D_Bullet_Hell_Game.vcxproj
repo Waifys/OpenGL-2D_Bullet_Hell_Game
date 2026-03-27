@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\BulletManager\BulletManager.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Player\Player.cpp" />
     <ClCompile Include="src\Player\Player_Attack\Player_Attack.cpp" />
@@ -26,6 +27,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Assets\stb_image.h" />
+    <ClInclude Include="src\BulletManager\BulletManager.h" />
     <ClInclude Include="src\Player\Player.h" />
     <ClInclude Include="src\Player\Player_Attack\Player_Attack.h" />
     <ClInclude Include="src\Shaders\Shader.hpp" />

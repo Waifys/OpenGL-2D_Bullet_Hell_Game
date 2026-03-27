@@ -11,7 +11,7 @@ public:
 	float radius;
 
 	// Constructor declaration
-	Player(glm::vec2 startPos);
+	Player(glm::vec2 startPos, int VAO);
 
 	// Method declaration
 	void ProcessInput(GLFWwindow* window, float deltaTime);
@@ -19,5 +19,12 @@ public:
 	// You could also add a Draw method here later
 	void Draw(Shader &shader);
 private:
-	BulletManager* bulletManager;
+	AttackManager* bulletManager;
+	unsigned int VAO, textureID;
+
+	/* Variables for sprite animation */
+	int currentFrame = 0;
+	int totalFrames = 8;
+	float frameDuration = 0.1f;
+	float frameTimer = 0.0f;
 };

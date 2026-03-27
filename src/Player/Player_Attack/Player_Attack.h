@@ -3,21 +3,21 @@
 #include <glm/glm.hpp>
 #include <Shaders/Shader.hpp>
 
-struct Bullet
+struct Attack
 {
 	glm::vec2 position;
 	glm::vec2 velocity;
 	bool active = false;
 };
 
-class BulletManager {
+class AttackManager {
 public:
 	static const int MAX_BULLETS = 500;
 	float fireCooldown = 0.0f;
-	float fireRate = 0.07f;
-	Bullet pool[MAX_BULLETS];
+	float fireRate = 0.1f;
+	Attack pool[MAX_BULLETS];
 
-	BulletManager(unsigned int VAO);
+	AttackManager(unsigned int VAO);
 
 	void fire(glm::vec2 startPos);
 	void update(float deltaTime);

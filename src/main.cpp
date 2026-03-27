@@ -2,14 +2,33 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
-
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/rotate_vector.hpp>
 #include "Shaders/Shader.hpp"
 #include "Player/Player.h"
+
+#include "BulletManager/BulletManager.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Assets/stb_image.h"
 
+float cooldown = 0.05;
+float currentDegree = 0;
+
+void spawnBall(BulletManager* bm, float deltaTime)
+{
+    if (cooldown < 0)
+    {
+        bm->addBullet(glm::vec2(640.0f/2, 100.0f), glm::rotate(glm::vec2(0, -100), glm::sin(currentDegree)));
+        cooldown = 0.05;
+    }
+     
+    currentDegree -= deltaTime*5;
+    cooldown -= deltaTime;
+}
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void readInput(GLFWwindow* window, BulletManager* bulletmanager);
 
 float vertices[] = {
     // positions        // texture coords
@@ -23,8 +42,6 @@ unsigned int indices[] = {  // note that we start from 0!
     1, 2, 3    // second triangle
 };
 
-
-
 int main()
 {
     if(!glfwInit())
@@ -36,10 +53,8 @@ int main()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	
-    //glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-	GLFWwindow* window = glfwCreateWindow(640*2, 360*2, "Window", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(640, 360, "Window", NULL, NULL);
     if(!window)
     {
         std::cout << "Failed to Initialize a window\n";
@@ -56,13 +71,15 @@ int main()
 
     glfwSetWindowAspectRatio(window, 16, 9);
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     /* Create Shader Program */
     Shader shader("src/Shaders/spriteVertexShader.glsl", "src/Shaders/spriteFragmentShader.glsl");
 
-    /* Create and set buffers */
+    BulletManager* bulletmanager = new BulletManager();
 
-    Player player(glm::vec2(320, 180));
+    /* Create and set buffers */
 
     unsigned int VBO, VAO, EBO;
     glGenBuffers(1, &VBO);
@@ -79,7 +96,7 @@ int main()
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
@@ -90,31 +107,7 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    /* Creating a texture */
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
-    // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load image, create texture and generate mipmaps
-    int width, height, nrChannels;
-    unsigned char* data = stbi_load("src/Assets/Player/Space-Invaders-ship.png", &width, &height, &nrChannels, 4);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    if (data) {
-        // Use GL_RGBA for both internal format and format
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "Failed to load texture" << std::endl;
-    }
-    stbi_image_free(data);
+    Player player(glm::vec2(320, 180), VAO);
 
     float lastFrame = 0.0f;
 
@@ -127,11 +120,14 @@ int main()
         glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        shader.use();
-        glBindTexture(GL_TEXTURE_2D, texture);
         glBindVertexArray(VAO);
         player.ProcessInput(window, deltaTime);
+        readInput(window, bulletmanager);
         player.Draw(shader);
+
+        bulletmanager->update(deltaTime);
+        bulletmanager->draw(projection);
+        spawnBall(bulletmanager, deltaTime);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -144,4 +140,12 @@ int main()
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
+}
+
+void readInput(GLFWwindow* window, BulletManager* bulletmanager)
+{
+    if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS)
+    {
+        bulletmanager->addBullet(glm::vec2(300, 300), glm::vec2(0, 1));
+    }
 }
