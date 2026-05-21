@@ -14,7 +14,7 @@ AttackManager::AttackManager(unsigned int VAO)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     int width, height, nrChannels;
-    unsigned char* data = stbi_load("src/Assets/Player/ball.png", &width, &height, &nrChannels, 4);
+    unsigned char* data = stbi_load("src/Assets/Player/bullet.png", &width, &height, &nrChannels, 4);
 
 
 
@@ -61,6 +61,7 @@ void AttackManager::draw(Shader& shader) {
             model = glm::translate(model, glm::vec3(pool[i].position, 0.0f));
             model = glm::scale(model, glm::vec3(8.0f, 8.0f, 1.0f)); 
             shader.setMat4("model", model);
+            shader.setInt("amountOfSprites", 0);
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         }
     }

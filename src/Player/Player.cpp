@@ -2,11 +2,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "Assets/stb_image.h"
 
-// The :: tells C++ "This function belongs to the Player class"
 Player::Player(glm::vec2 startPos, int VAO) {
 	position = startPos;
-	speed = 150.0f;
+	speed = 80.0f;
 	radius = 15.0f;
+	health = 100.0f;
 
 	bulletManager = new AttackManager(VAO);
 	this->VAO = VAO;
@@ -20,7 +20,7 @@ Player::Player(glm::vec2 startPos, int VAO) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	int width, height, nrChannels;
-	unsigned char* data = stbi_load("src/Assets/Player/Space-Invaders-ship.png", &width, &height, &nrChannels, 4);
+	unsigned char* data = stbi_load("src/Assets/Player/Player_Sprite.png", &width, &height, &nrChannels, 4);
 
 
 	if (data) {
@@ -32,6 +32,10 @@ Player::Player(glm::vec2 startPos, int VAO) {
 
 void Player::ProcessInput(GLFWwindow* window, float deltaTime) {
 	float totalSpeed = speed;
+	if (imunityWindow > 0)
+	{
+		imunityWindow -= deltaTime;
+	}
 	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
 	{
 		totalSpeed *= 0.4;
@@ -58,7 +62,7 @@ void Player::ProcessInput(GLFWwindow* window, float deltaTime) {
 		bulletManager->fire(position - glm::vec2(0.0f, 16.0f));
 	}
 
-	position = glm::clamp(position, glm::vec2(0, 0), glm::vec2(640, 360));
+	position = glm::clamp(position, glm::vec2(0, 0), glm::vec2(640.0f* 0.4f, 360.0f* 0.95f));
 	bulletManager->update(deltaTime);
 }
 
@@ -68,11 +72,17 @@ void Player::Draw(Shader& shader)
 
 	glm::mat4 model(1.0f);
 	model = glm::translate(model, glm::vec3(position, 0.0f));
-	model = glm::scale(model, glm::vec3(16.0f, 16.0f, 1.0f));
-
+	model = glm::scale(model, glm::vec3(420.0/7.0f, 70.0f, 1.0f)/3.0f);
+	std::cout << position.x << " " << position.y << std::endl;
 
 	GLuint MatrixID = glGetUniformLocation(shader.ID, "model");
 	glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &model[0][0]);
+
+	float timePerFrame = 0.1f; // 10 fps
+	int frameCount = 7;
+	int currentFrame = int(fmod(glfwGetTime() / timePerFrame, double(frameCount)));
+	shader.setInt("amountOfSprites", frameCount);
+	shader.setInt("currentSprite", currentFrame);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, textureID);
@@ -81,4 +91,14 @@ void Player::Draw(Shader& shader)
 
 	bulletManager->draw(shader);
 
+}
+
+void Player::getHit(float damage)
+{
+	health -= damage;
+	if (health < 0)
+	{
+		//TODO: Lose screen
+	}
+	imunityWindow = 3.0f;
 }

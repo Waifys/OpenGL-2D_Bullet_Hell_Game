@@ -12,7 +12,8 @@ struct Bullet
 class BulletManager
 {
 public:
-	static const int MAX_BULLETS = 5000;
+	static const int MAX_BULLETS = 50000;
+	float bulletSpeed;
 	std::vector<Bullet> bulletPositions;
 
 	BulletManager();

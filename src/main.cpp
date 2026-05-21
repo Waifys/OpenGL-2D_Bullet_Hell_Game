@@ -6,29 +6,46 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include "Shaders/Shader.hpp"
 #include "Player/Player.h"
+#include "BulletManager/BulletSpawner/BulletSpawner.h"
+#include "CollisionManager/CollisionManager.h"
+#include "BackGround/Background.h"
+#include "UI/UI.h"
 
 #include "BulletManager/BulletManager.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Assets/stb_image.h"
 
-float cooldown = 0.05;
-float currentDegree = 0;
-
-void spawnBall(BulletManager* bm, float deltaTime)
-{
-    if (cooldown < 0)
-    {
-        bm->addBullet(glm::vec2(640.0f/2, 100.0f), glm::rotate(glm::vec2(0, -100), glm::sin(currentDegree)));
-        cooldown = 0.05;
-    }
-     
-    currentDegree -= deltaTime*5;
-    cooldown -= deltaTime;
-}
+/*TODO: remove later tmp GUI*/
+#include"imgui.h"
+#include"imgui_impl_glfw.h"
+#include"imgui_impl_opengl3.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void readInput(GLFWwindow* window, BulletManager* bulletmanager);
+
+/*TODO: remove this is for tmp GUI*/
+void beginFrame(BulletSpawner* bulletSpawner,BulletManager* bulletManager, Player* player)
+{
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("Window");
+    if (ImGui::CollapsingHeader("Program Variables"))
+    {
+        ImGui::InputInt("Bullets per shot", &bulletSpawner->bulletPerShot);
+        ImGui::SliderFloat("Bullet Spread", &bulletSpawner->bulletSpread, 1.0f, 360.0f);
+        ImGui::SliderFloat("Bullet direction", &bulletSpawner->direction, 1.0f, 360.0f);
+        ImGui::SliderFloat("Spin speed", &bulletSpawner->spinSpeed, 0.0f, 1000.0f);
+        ImGui::InputFloat("Cooldown between Bullets", &bulletSpawner->fireRate);
+        ImGui::InputFloat2("Bullets Spawn Position", &bulletSpawner->position.x);
+        ImGui::InputFloat("Bullet Speed", &bulletManager->bulletSpeed);
+        ImGui::InputFloat("Player Health", &player->health);
+        ImGui::InputFloat("Player Immunity Window", &player->imunityWindow);
+    }
+    ImGui::End();
+}
 
 float vertices[] = {
     // positions        // texture coords
@@ -37,13 +54,19 @@ float vertices[] = {
     -0.5f, -0.5f, 0.0f,   0.0f, 0.0f,   // bottom left
     -0.5f,  0.5f, 0.0f,   0.0f, 1.0f    // top left 
 };
-unsigned int indices[] = {  // note that we start from 0!
+unsigned int indices[] = {
     0, 1, 3,   // first triangle
     1, 2, 3    // second triangle
 };
 
+
+float width = 640, height=360;
 int main()
 {
+
+    glfwSetErrorCallback([](int error, const char* desc) {
+        std::cerr << "GLFW Error " << error << ": " << desc << "\n";
+        });
     if(!glfwInit())
     {
         std::cout << "Failed to Initialize GLFW\n";
@@ -78,6 +101,15 @@ int main()
     Shader shader("src/Shaders/spriteVertexShader.glsl", "src/Shaders/spriteFragmentShader.glsl");
 
     BulletManager* bulletmanager = new BulletManager();
+    CollisionManager* collisionManager = new CollisionManager();
+
+    /*TODO: remove this is for tmp GUI */
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
 
     /* Create and set buffers */
 
@@ -88,7 +120,7 @@ int main()
 
     glBindVertexArray(VAO);
 
-    glm::mat4 projection = glm::ortho(0.0f, 640.0f, 360.0f, 0.0f, -1.0f, 1.0f);
+    glm::mat4 projection = glm::ortho(0.0f, 640.0f*0.4f, 360.0f*0.95f, 0.0f, -1.0f, 1.0f);
     shader.use();
     shader.setMat4("projection", projection);
 
@@ -107,7 +139,12 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    Player player(glm::vec2(320, 180), VAO);
+    Player* player = new Player(glm::vec2(320, 180), VAO);
+    BulletSpawner* bulletSpawner2 = new BulletSpawner(bulletmanager, player);
+    BulletSpawner* bulletSpawner = new BulletSpawner(bulletmanager);
+    Background* background = new Background(VAO);
+    UI* ui = new UI(VAO);
+
 
     float lastFrame = 0.0f;
 
@@ -117,17 +154,34 @@ int main()
         float deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glViewport(0, 0, width, height);
+        ui->draw(&shader);
+        glViewport(width * 0.05, height * 0.05, width*0.4, height*0.90);
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(width * 0.05, height * 0.05, width * 0.4, height * 0.90);
+        glClearColor(0.05, 0.02, 0.1, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_SCISSOR_TEST);
+        background->update(deltaTime);
+        background->draw();
+
+        beginFrame(bulletSpawner, bulletmanager, player);
 
         glBindVertexArray(VAO);
-        player.ProcessInput(window, deltaTime);
+        player->ProcessInput(window, deltaTime);
         readInput(window, bulletmanager);
-        player.Draw(shader);
+        player->Draw(shader);
 
         bulletmanager->update(deltaTime);
         bulletmanager->draw(projection);
-        spawnBall(bulletmanager, deltaTime);
+        bulletSpawner->update(deltaTime);
+		bulletSpawner2->update(deltaTime);
+        collisionManager->checkColission(player, bulletmanager);
+       
+
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -137,9 +191,12 @@ int main()
     return 0;
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+void framebuffer_size_callback(GLFWwindow* window, int width_local, int height_local)
 {
+    width = width_local;
+    height = height_local;
     glViewport(0, 0, width, height);
+    
 }
 
 void readInput(GLFWwindow* window, BulletManager* bulletmanager)

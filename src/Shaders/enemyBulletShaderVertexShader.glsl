@@ -10,6 +10,6 @@ uniform mat4 projection;
 void main()
 {
 	TexCoords = textCoords;
-	vec2 scaledVertex = vertex * 8;
+	vec2 scaledVertex = vertex * 6;
     gl_Position = projection * vec4(scaledVertex + instanceOffset, 0.0, 1.0);
 }

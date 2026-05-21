@@ -9,15 +9,18 @@ public:
 	glm::vec2 position;
 	float speed;
 	float radius;
+	float health;
+	float imunityWindow;
 
 	// Constructor declaration
 	Player(glm::vec2 startPos, int VAO);
 
-	// Method declaration
 	void ProcessInput(GLFWwindow* window, float deltaTime);
 
-	// You could also add a Draw method here later
 	void Draw(Shader &shader);
+
+	void getHit(float damage);
+
 private:
 	AttackManager* bulletManager;
 	unsigned int VAO, textureID;

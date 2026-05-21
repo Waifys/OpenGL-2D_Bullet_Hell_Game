@@ -17,6 +17,7 @@ unsigned int indices2[] = {
 
 BulletManager::BulletManager()
 {
+	bulletSpeed = 1.0f;
 	 this->shader = new Shader("src/Shaders/enemyBulletShaderVertexShader.glsl", "src/Shaders/enemyBulletShaderFragmentShader.glsl");
 
 	 glGenVertexArrays(1, &VAO);
@@ -73,19 +74,14 @@ void BulletManager::addBullet(glm::vec2 startPos, glm::vec2 direction)
 
 bool isInside(glm::vec2 pos) {
 	return glm::all(glm::greaterThanEqual(pos, glm::vec2(0.0f, 0.0f))) &&
-		glm::all(glm::lessThanEqual(pos, glm::vec2(640.0f, 360.0f)));
+		glm::all(glm::lessThanEqual(pos, glm::vec2(640.0f, 480.0f)));
 }
 
 void BulletManager::update(float deltaTime)
 {
-	if (!bulletPositions.empty())
-	{
-		std::cout << bulletPositions[0].position.y << std::endl;
-		std::cout << bulletPositions.size() << std::endl;
-	}
-
+	std::cout << bulletPositions.size() << std::endl;
 	for (int i = 0; i < (int)bulletPositions.size(); ) {
-			bulletPositions[i].position -= deltaTime * bulletPositions[i].velocity;
+			bulletPositions[i].position -= deltaTime * bulletPositions[i].velocity * bulletSpeed;
 			if (!isInside(bulletPositions[i].position))
 			{
 				bulletPositions[i] = bulletPositions.back();
